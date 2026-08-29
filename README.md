@@ -4,7 +4,7 @@ An AI project that learns to balance an inverted pendulum using **neuroevolution
 
 ## Example
 
-<video controls src="demo/demo.mp4" title="Title"></video>
+![Demo](demo/demo.gif)
 
 ## 🚀 Overview
 
