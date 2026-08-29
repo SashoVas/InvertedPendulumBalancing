@@ -1,0 +1,151 @@
+import numpy as np
+from constants import *
+
+
+class PendulumCart:
+    """Shared cart state/behavior used by both pendulum modes.
+
+    The cart is driven only by the applied force and its own friction - the
+    pendulum swinging on top of it does not push back on it. This keeps the
+    cart's motion simple and fully predictable from the control input alone.
+    """
+
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.x = 0.0
+        self.x_dot = 0.0
+
+    def cart_acceleration(self, force):
+        limit = TRACK_HALF_WIDTH / PIXELS_PER_METER
+        if self.x <= -limit and force < 0:
+            self.x = -limit
+            self.x_dot = 0.0
+            return 0.0
+
+        if self.x >= limit and force > 0:
+            self.x = limit
+            self.x_dot = 0.0
+            return 0.0
+
+        return (force - DAMPING_CART * self.x_dot) / CART_MASS
+
+    def clamp_to_track(self):
+        limit = TRACK_HALF_WIDTH / PIXELS_PER_METER
+        if self.x < -limit:
+            self.x, self.x_dot = -limit, 0.0
+        elif self.x > limit:
+            self.x, self.x_dot = limit, 0.0
+
+    def cart_pixel_pos(self):
+        return (SCREEN_W / 2 + self.x * PIXELS_PER_METER, TRACK_Y)
+
+
+class SinglePendulum(PendulumCart):
+    """Cart with a single inverted pendulum (point mass on a rod)."""
+
+    name = "Single Pendulum"
+
+    def reset(self):
+        super().reset()
+        self.theta = np.pi
+        self.theta_dot = 0.0
+
+    def step(self, force, dt):
+        g, l, m = GRAVITY, S_POLE_LEN, S_POLE_MASS
+        s, c = np.sin(self.theta), np.cos(self.theta)
+
+        x_ddot = self.cart_acceleration(force)
+
+        theta_ddot = (g * s - c * x_ddot) / l - DAMPING_JOINT * \
+            self.theta_dot / (m * l * l)
+
+        self.x_dot += x_ddot * dt
+        self.x += self.x_dot * dt
+        self.theta_dot += theta_ddot * dt
+        self.theta += self.theta_dot * dt
+
+        self.clamp_to_track()
+
+    def upright_fraction(self):
+        return (np.cos(self.theta) + 1) / 2
+
+    def joint_positions(self):
+        cart_px = self.cart_pixel_pos()
+        bob_px = (
+            cart_px[0] + S_POLE_LEN * PIXELS_PER_METER * np.sin(self.theta),
+            cart_px[1] - S_POLE_LEN * PIXELS_PER_METER * np.cos(self.theta),
+        )
+        return [cart_px, bob_px]
+
+
+class DoublePendulum(PendulumCart):
+    """Cart with two linked inverted pendulum rods (point mass on each end)."""
+
+    name = "Double Pendulum"
+
+    def reset(self):
+        super().reset()
+        self.theta1 = np.pi
+        self.theta1_dot = 0.0
+        self.theta2 = np.pi
+        self.theta2_dot = 0.0
+
+    def step(self, force, dt):
+        m1, m2 = D_POLE_MASS_1, D_POLE_MASS_2
+        l1, l2 = D_POLE_LEN_1, D_POLE_LEN_2
+        g = GRAVITY
+
+        t1d, t2d = self.theta1_dot, self.theta2_dot
+        s1, c1 = np.sin(self.theta1), np.cos(self.theta1)
+        s2, c2 = np.sin(self.theta2), np.cos(self.theta2)
+        s12 = np.sin(self.theta1 - self.theta2)
+        c12 = np.cos(self.theta1 - self.theta2)
+
+        x_ddot = self.cart_acceleration(force)
+
+        A = np.array([
+            [(m1 + m2) * l1 * l1, m2 * l1 * l2 * c12],
+            [m2 * l1 * l2 * c12,  m2 * l2 * l2],
+        ])
+        b = np.array([
+            -m2 * l1 * l2 * s12 * t2d ** 2 + (m1 + m2) * g * l1 * s1
+            - DAMPING_JOINT * t1d - (m1 + m2) * l1 * c1 * x_ddot,
+            m2 * l1 * l2 * s12 * t1d ** 2 + m2 * g * l2 * s2
+            - DAMPING_JOINT * t2d - m2 * l2 * c2 * x_ddot,
+        ])
+        t1_ddot, t2_ddot = np.linalg.solve(A, b)
+
+        self.x_dot += x_ddot * dt
+        self.x += self.x_dot * dt
+        self.theta1_dot += t1_ddot * dt
+        self.theta1 += self.theta1_dot * dt
+        self.theta2_dot += t2_ddot * dt
+        self.theta2 += self.theta2_dot * dt
+
+        self.clamp_to_track()
+
+    def upright_fraction(self):
+        """1.0 when both links point straight up, 0.0 when both hang down.
+
+        Based on the height of the tip (end of the second link) relative to
+        the cart, normalized by the pendulum's total length.
+        """
+        tip_height = D_POLE_LEN_1 * \
+            np.cos(self.theta1) + D_POLE_LEN_2 * np.cos(self.theta2)
+        total_length = D_POLE_LEN_1 + D_POLE_LEN_2
+        return (tip_height / total_length + 1) / 2
+
+    def joint_positions(self):
+        """Pixel positions from the cart out to the tip: [cart, joint1, tip]."""
+        cart_px = self.cart_pixel_pos()
+        j1_px = (
+            cart_px[0] + D_POLE_LEN_1 * PIXELS_PER_METER * np.sin(self.theta1),
+            cart_px[1] - D_POLE_LEN_1 * PIXELS_PER_METER * np.cos(self.theta1),
+        )
+        tip_px = (
+            j1_px[0] + D_POLE_LEN_2 * PIXELS_PER_METER * np.sin(self.theta2),
+            j1_px[1] - D_POLE_LEN_2 * PIXELS_PER_METER * np.cos(self.theta2),
+        )
+        return [cart_px, j1_px, tip_px]
