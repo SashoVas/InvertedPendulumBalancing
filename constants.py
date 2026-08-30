@@ -9,7 +9,7 @@ SUBSTEPS = 4                         # physics substeps per frame (stability)
 
 GRAVITY = 9.81
 CART_MASS = 1.0
-FORCE_MAG = 14.0                    # push force applied by arrow keys
+FORCE_MAG = 20.0                    # push force applied by arrow keys
 DAMPING_CART = 0.5                   # friction on the cart
 DAMPING_JOINT = 0.02                  # friction at each pendulum joint
 
@@ -40,4 +40,6 @@ TRACK_LIMIT = TRACK_HALF_WIDTH / PIXELS_PER_METER
 X_DOT_SCALE = 5.0
 THETA_DOT_SCALE = 10.0
 
-MAX_ANGLE_TO_AWARD_POINTS = 30
+MAX_ANGLE_TO_AWARD_POINTS = 45
+
+SPACE_NUDGE_IMPULSE = 1.5

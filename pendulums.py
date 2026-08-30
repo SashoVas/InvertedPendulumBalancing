@@ -47,6 +47,9 @@ class SinglePendulum(PendulumCart):
 
     name = "Single Pendulum"
 
+    def nudge_tip(self, impulse):
+        self.theta_dot += impulse
+
     def reset(self):
         super().reset()
         self.theta = np.pi
@@ -88,27 +91,38 @@ class SinglePendulum(PendulumCart):
             self.theta_dot / THETA_DOT_SCALE,
         ]
 
-    def get_fitness(self):
+    def get_fitness(self, points_per_tick):
+        angle_error = abs(
+            np.arctan2(
+                np.sin(self.theta),
+                np.cos(self.theta)))
+
+        is_balanced = angle_error <= np.deg2rad(MAX_ANGLE_TO_AWARD_POINTS)
         upright = self.upright_fraction()
 
-        position_penalty = abs(self.x) / TRACK_LIMIT
-        velocity_penalty = abs(self.x_dot) / X_DOT_SCALE
-        angular_velocity_penalty = abs(
-            self.theta_dot
-        ) / THETA_DOT_SCALE
+        position_error = abs(self.x) / TRACK_LIMIT
+        angle_reward = np.exp(-4.0 * angle_error**2)
+        angular_velocity_penalty = (abs(self.theta_dot) / THETA_DOT_SCALE)
+        velocity_penalty = (abs(self.x_dot) / X_DOT_SCALE) ** 2
+
         fitness = (
-            upright
-            - 0.2 * position_penalty
-            - 0.05 * velocity_penalty
-            - 0.05 * angular_velocity_penalty
+            1.0 * angle_reward
+            - 0.1 * position_error
+            - 0.1 * velocity_penalty
+            - 0.1 * angular_velocity_penalty
         )
-        return fitness
+        score = (upright if is_balanced else 0)
+
+        return fitness, score*points_per_tick
 
 
 class DoublePendulum(PendulumCart):
     """Cart with two linked inverted pendulum rods (point mass on each end)."""
 
     name = "Double Pendulum"
+
+    def nudge_tip(self, impulse):
+        self.theta2_dot += impulse
 
     def reset(self):
         super().reset()
@@ -187,3 +201,6 @@ class DoublePendulum(PendulumCart):
             np.cos(self.theta2),
             self.theta_dot2 / THETA_DOT_SCALE,
         ]
+
+    def get_fitness(self, points_per_tick):
+        pass

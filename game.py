@@ -75,9 +75,11 @@ def play_game(render=True, agent=None):
     dt = 1.0 / FPS
 
     while running:
+        force = 0.0
+
         if render:
             clock.tick(FPS)
-        if render and agent is None:
+        if render:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
@@ -92,16 +94,18 @@ def play_game(render=True, agent=None):
                         pendulum = modes[mode_names[mode_index]]
                         elapsed, score, round_over = start_new_round()
                         score_timer = 0.0
+                    elif event.key == pygame.K_SPACE:
+                        pendulum.nudge_tip(
+                            np.random.randn()*SPACE_NUDGE_IMPULSE)
 
             keys = pygame.key.get_pressed()
-        else:
-
-            keys = {}
+        if agent is not None:
+            # keys = {pygame.K_LEFT: False, pygame.K_RIGHT: False}
             if agent is not None:
                 state = pendulum.get_state()
-                keys = agent.get_action(state)
+                # keys = agent.get_action(state)
+                force = agent.get_action(state, use_force=True)*FORCE_MAG
 
-        force = 0.0
         if keys[pygame.K_LEFT]:
             force -= FORCE_MAG
         if keys[pygame.K_RIGHT]:
@@ -115,23 +119,11 @@ def play_game(render=True, agent=None):
             elapsed += dt
             score_timer += dt
 
-            angle_error = abs(
-                np.arctan2(
-                    np.sin(pendulum.theta),
-                    np.cos(pendulum.theta)
-                )
-            )
-            is_balanced = angle_error <= np.deg2rad(MAX_ANGLE_TO_AWARD_POINTS)
-
-            upright = pendulum.upright_fraction()
-            current_fitness = pendulum.get_fitness()
-
-            while score_timer >= SCORE_TICK:
-                score_timer -= SCORE_TICK
-                if is_balanced:
-                    score += POINTS_PER_TICK * upright
-                if is_balanced:
-                    fitness += current_fitness*dt
+            current_fitness, current_score = pendulum.get_fitness(
+                POINTS_PER_TICK)
+            ticks, score_timer = divmod(score_timer, SCORE_TICK)
+            score += ticks * current_score
+            fitness += current_fitness*dt
 
             if elapsed >= ROUND_DURATION:
                 round_over = True

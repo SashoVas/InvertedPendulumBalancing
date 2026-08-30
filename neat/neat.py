@@ -638,10 +638,11 @@ class NeatAgent:
 
         return NeatAgent(obj)
 
-    def get_action(self, state):
+    def get_action(self, state, use_force=False):
 
         output = self.network.activate(state)
-
+        if use_force:
+            return float(np.clip(output[0], -2.0, 2.0))
         action = np.argmax(output).item()
 
         if action == 0:
