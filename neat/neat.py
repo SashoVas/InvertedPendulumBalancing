@@ -454,7 +454,7 @@ class NeatNetwork:
 
             values[node_id] = np.tanh(total)
 
-        return np.array([values[node_id]for node_id in self.output_nodes],
+        return np.array([values.get(node_id, 0) for node_id in self.output_nodes],
                         dtype=np.float32)
 
 

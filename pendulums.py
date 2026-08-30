@@ -79,6 +79,31 @@ class SinglePendulum(PendulumCart):
         )
         return [cart_px, bob_px]
 
+    def get_state(self):
+        return [
+            self.x / TRACK_LIMIT,
+            self.x_dot / X_DOT_SCALE,
+            np.sin(self.theta),
+            np.cos(self.theta),
+            self.theta_dot / THETA_DOT_SCALE,
+        ]
+
+    def get_fitness(self):
+        upright = self.upright_fraction()
+
+        position_penalty = abs(self.x) / TRACK_LIMIT
+        velocity_penalty = abs(self.x_dot) / X_DOT_SCALE
+        angular_velocity_penalty = abs(
+            self.theta_dot
+        ) / THETA_DOT_SCALE
+        fitness = (
+            upright
+            - 0.2 * position_penalty
+            - 0.05 * velocity_penalty
+            - 0.05 * angular_velocity_penalty
+        )
+        return fitness
+
 
 class DoublePendulum(PendulumCart):
     """Cart with two linked inverted pendulum rods (point mass on each end)."""
@@ -149,3 +174,16 @@ class DoublePendulum(PendulumCart):
             j1_px[1] - D_POLE_LEN_2 * PIXELS_PER_METER * np.cos(self.theta2),
         )
         return [cart_px, j1_px, tip_px]
+
+    def get_state(self):
+        return [
+            self.x / TRACK_LIMIT,
+            self.x_dot / X_DOT_SCALE,
+            np.sin(self.theta1),
+            np.cos(self.theta1),
+            self.theta_dot1 / THETA_DOT_SCALE,
+
+            np.sin(self.theta2),
+            np.cos(self.theta2),
+            self.theta_dot2 / THETA_DOT_SCALE,
+        ]

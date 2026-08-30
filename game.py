@@ -47,9 +47,6 @@ def draw_scene(screen, font, pendulum, score, best_score, time_left, round_over)
                   (SCREEN_W / 2 - 280, SCREEN_H / 2 - 120), HIGHLIGHT_COLOR)
 
 
-# ---------------------------------------------------------------------------
-# Main loop
-# ---------------------------------------------------------------------------
 def play_game(render=True, agent=None):
 
     if render:
@@ -75,12 +72,11 @@ def play_game(render=True, agent=None):
     score_timer = 0.0  # accumulates dt until the next scoring tick
 
     running = True
+    dt = 1.0 / FPS
+
     while running:
         if render:
-            dt = min(clock.tick(FPS) / 1000.0, MAX_DT)
-        else:
-            dt = 1.0 / FPS
-
+            clock.tick(FPS)
         if render and agent is None:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -102,13 +98,7 @@ def play_game(render=True, agent=None):
 
             keys = {}
             if agent is not None:
-                state = [
-                    pendulum.x / TRACK_LIMIT,
-                    pendulum.x_dot / X_DOT_SCALE,
-                    np.sin(pendulum.theta),
-                    np.cos(pendulum.theta),
-                    pendulum.theta_dot / THETA_DOT_SCALE,
-                ]
+                state = pendulum.get_state()
                 keys = agent.get_action(state)
 
         force = 0.0
@@ -123,25 +113,25 @@ def play_game(render=True, agent=None):
                 pendulum.step(force, sub_dt)
 
             elapsed += dt
-
             score_timer += dt
 
+            angle_error = abs(
+                np.arctan2(
+                    np.sin(pendulum.theta),
+                    np.cos(pendulum.theta)
+                )
+            )
+            is_balanced = angle_error <= np.deg2rad(MAX_ANGLE_TO_AWARD_POINTS)
+
             upright = pendulum.upright_fraction()
-            position_penalty = abs(pendulum.x) / TRACK_LIMIT
-            velocity_penalty = abs(pendulum.x_dot) / X_DOT_SCALE
-            angular_velocity_penalty = abs(
-                pendulum.theta_dot
-            ) / THETA_DOT_SCALE
+            current_fitness = pendulum.get_fitness()
 
             while score_timer >= SCORE_TICK:
                 score_timer -= SCORE_TICK
-                score += POINTS_PER_TICK * upright
-                fitness += (
-                    upright
-                    - 0.2 * position_penalty
-                    - 0.05 * velocity_penalty
-                    - 0.05 * angular_velocity_penalty
-                ) * dt
+                if is_balanced:
+                    score += POINTS_PER_TICK * upright
+                if is_balanced:
+                    fitness += current_fitness*dt
 
             if elapsed >= ROUND_DURATION:
                 round_over = True
@@ -167,5 +157,6 @@ def play_game(render=True, agent=None):
 if __name__ == "__main__":
     # agent = Agent()
     # agent.load_state_dict(torch.load("agents/neuroevolution.pth"))
-    agent = NeatAgent.load_from_file("agents/best_neat_genome.pkl")
-    play_game(render=True, agent=agent)
+    agent = NeatAgent.load_from_file(
+        "agents/best_neat_genome_single_pendulum.pkl")
+    print(play_game(render=True, agent=agent))
