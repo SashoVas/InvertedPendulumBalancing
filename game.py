@@ -1,5 +1,5 @@
 import sys
-
+import constants
 import numpy as np
 import pygame
 import torch
@@ -47,7 +47,7 @@ def draw_scene(screen, font, pendulum, score, best_score, time_left, round_over)
                   (SCREEN_W / 2 - 280, SCREEN_H / 2 - 120), HIGHLIGHT_COLOR)
 
 
-def play_game(render=True, agent=None):
+def play_game(render=True, agent=None, mode=0, start_angle=np.pi, start_angle2=np.pi):
 
     if render:
         pygame.init()
@@ -58,13 +58,17 @@ def play_game(render=True, agent=None):
 
     modes = {"single": SinglePendulum(), "double": DoublePendulum()}
     mode_names = list(modes.keys())
-    mode_index = 0
+    mode_index = mode
     pendulum = modes[mode_names[mode_index]]
 
     best_scores = {name: 0.0 for name in modes}
 
     def start_new_round():
-        pendulum.reset()
+        if mode == 1:
+            pendulum.reset(angle=start_angle, angle2=start_angle2)
+        else:
+            pendulum.reset(angle=start_angle)
+
         return 0.0, 0.0, False  # elapsed, score, round_over
 
     elapsed, score, round_over = start_new_round()
@@ -100,7 +104,8 @@ def play_game(render=True, agent=None):
 
             keys = pygame.key.get_pressed()
         if agent is not None:
-            # keys = {pygame.K_LEFT: False, pygame.K_RIGHT: False}
+            if not render:
+                keys = {pygame.K_LEFT: False, pygame.K_RIGHT: False}
             if agent is not None:
                 state = pendulum.get_state()
                 # keys = agent.get_action(state)
@@ -150,5 +155,6 @@ if __name__ == "__main__":
     # agent = Agent()
     # agent.load_state_dict(torch.load("agents/neuroevolution.pth"))
     agent = NeatAgent.load_from_file(
-        "agents/best_neat_genome_single_pendulum.pkl")
-    print(play_game(render=True, agent=agent))
+        "agents/best_neat_genome_double_pendulum.pkl")
+    print(play_game(render=True, agent=agent, mode=1))
+    # ,start_angle=0.0+np.random.randn(), start_angle2=0.0+np.random.randn()))

@@ -1,19 +1,19 @@
-SCREEN_W, SCREEN_H = 900, 600
+SCREEN_W, SCREEN_H = 1200, 600
 TRACK_Y = SCREEN_H // 2            # vertical screen position of the track
-TRACK_HALF_WIDTH = 380              # how far (in pixels) the cart may travel
+TRACK_HALF_WIDTH = 320              # how far (in pixels) the cart may travel
 PIXELS_PER_METER = 120
 
 FPS = 60
 MAX_DT = 0.05                       # clamp large frame-time spikes
-SUBSTEPS = 4                         # physics substeps per frame (stability)
+SUBSTEPS = 2                         # physics substeps per frame (stability)
 
-GRAVITY = 9.81
+GRAVITY = 3  # 9.81
 CART_MASS = 1.0
-FORCE_MAG = 20.0                    # push force applied by arrow keys
+FORCE_MAG = 25.0                    # push force applied by arrow keys
 DAMPING_CART = 0.5                   # friction on the cart
-DAMPING_JOINT = 0.02                  # friction at each pendulum joint
+DAMPING_JOINT = 0.3                  # friction at each pendulum joint
 
-ROUND_DURATION = 30.0                  # length of a round, in seconds
+ROUND_DURATION = 10.0                  # length of a round, in seconds
 SCORE_TICK = 0.1                        # seconds between score updates
 POINTS_PER_TICK = 0.1                    # points per tick when perfectly upright
 
@@ -43,3 +43,5 @@ THETA_DOT_SCALE = 10.0
 MAX_ANGLE_TO_AWARD_POINTS = 45
 
 SPACE_NUDGE_IMPULSE = 1.5
+MAX_THETA_DOT = 30.0
+MAX_X_DOT = 10.0

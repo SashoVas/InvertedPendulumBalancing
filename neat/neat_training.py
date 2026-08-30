@@ -13,13 +13,13 @@ from neat.neat import (
     NeatAgent,
 )
 
-GENERATIONS = 100
+GENERATIONS = 200
 
-INPUT_COUNT = 5
+INPUT_COUNT = 8
 OUTPUT_COUNT = 1
 
 config = NEATConfig(
-    population_size=200,
+    population_size=500,
 
     compatibility_threshold=3.0,
 
@@ -27,20 +27,21 @@ config = NEATConfig(
 
     elitism_per_species=2,
 
-    weight_mutation_rate=0.8,
+    weight_mutation_rate=0.9,
     weight_perturb_rate=0.9,
     weight_perturb_scale=0.15,
 
-    add_connection_rate=0.2,
+    add_connection_rate=0.15,
     add_node_rate=0.1,
 
-    toggle_connection_rate=0.05,
+    toggle_connection_rate=0.1,
 )
 
 
 def evaluate_agent(genome):
     agent = NeatAgent(genome)
-    return play_game(render=False, agent=agent)
+
+    return play_game(render=False, agent=agent, mode=1)
 
 
 def evaluate_population(population, pool, use_score=True):
@@ -83,8 +84,8 @@ if __name__ == "__main__":
 
     best_genome, history = train_agents(config, use_score=False)
 
-    with open("agents/best_neat_genome_single_pendulum.pkl", "wb") as file:
+    with open("agents/best_neat_genome_double_pendulum.pkl", "wb") as file:
         pickle.dump(best_genome, file)
 
-    with open("agents/neat_history_single_pendulum.pkl", "wb") as file:
+    with open("agents/neat_history_double_pendulum.pkl", "wb") as file:
         pickle.dump(history, file)
