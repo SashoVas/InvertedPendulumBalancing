@@ -102,7 +102,11 @@ class Genome:
 
     @classmethod
     def initial(
-        cls, input_count: int, output_count: int, tracker: InnovationTracker, rng: np.random.Generator,
+        cls,
+        input_count: int,
+        output_count: int,
+        tracker: InnovationTracker,
+        rng: np.random.Generator,
     ):
         genome = cls()
 
@@ -127,7 +131,7 @@ class Genome:
                     in_node=source,
                     out_node=target,
                     weight=float(rng.normal(0.0, 0.5)),
-                    enabled=True
+                    enabled=True,
                 )
 
         return genome
@@ -161,14 +165,21 @@ class Genome:
 
         if matching:
             weight_difference = np.mean(
-                [abs(self.connections[i].weight - other.connections[i].weight)for i in matching])
+                [
+                    abs(self.connections[i].weight -
+                        other.connections[i].weight)
+                    for i in matching
+                ]
+            )
 
         n = max(len(self.connections), len(other.connections))
         n = max(n, 1)
 
-        return (config.compatibility_c1 * excess / n
-                + config.compatibility_c2 * disjoint / n
-                + config.compatibility_c3 * weight_difference)
+        return (
+            config.compatibility_c1 * excess / n
+            + config.compatibility_c2 * disjoint / n
+            + config.compatibility_c3 * weight_difference
+        )
 
     def creates_cycle(self, source: int, target: int):
         adjacency = {}
@@ -177,10 +188,8 @@ class Genome:
             if not connection.enabled:
                 continue
 
-            adjacency.setdefault(
-                connection.in_node,
-                []
-            ).append(connection.out_node)
+            adjacency.setdefault(connection.in_node, []
+                                 ).append(connection.out_node)
 
         stack = [target]
         visited = set()
@@ -208,17 +217,26 @@ class Genome:
                 connection.weight = rng.normal(0.0, config.weight_reset_scale)
 
             connection.weight = float(
-                np.clip(connection.weight, -config.activation_weight_limit,
-                        config.activation_weight_limit)
+                np.clip(
+                    connection.weight,
+                    -config.activation_weight_limit,
+                    config.activation_weight_limit,
+                )
             )
 
-    def mutate_add_connection(self, tracker: InnovationTracker, rng: np.random.Generator):
+    def mutate_add_connection(
+        self, tracker: InnovationTracker, rng: np.random.Generator
+    ):
 
-        sources = [node.id for node in self.nodes.values()
-                   if node.type != NodeType.OUTPUT]
+        sources = [
+            node.id for node in self.nodes.values() if node.type != NodeType.OUTPUT
+        ]
 
-        targets = [node.id for node in self.nodes.values()
-                   if node.type in (NodeType.HIDDEN, NodeType.OUTPUT)]
+        targets = [
+            node.id
+            for node in self.nodes.values()
+            if node.type in (NodeType.HIDDEN, NodeType.OUTPUT)
+        ]
 
         if not sources or not targets:
             return
@@ -246,16 +264,19 @@ class Genome:
                 in_node=source,
                 out_node=target,
                 weight=float(rng.normal(0.0, 0.5)),
-                enabled=True
+                enabled=True,
             )
 
             return
 
     def mutate_add_node(self, tracker: InnovationTracker, rng: np.random.Generator):
 
-        candidates = [connection for connection in self.connections.values()
-                      if connection.enabled and tracker.get_split_node(connection.innovation) not in self.nodes
-                      ]
+        candidates = [
+            connection
+            for connection in self.connections.values()
+            if connection.enabled
+            and tracker.get_split_node(connection.innovation) not in self.nodes
+        ]
 
         if not candidates:
             return
@@ -267,34 +288,44 @@ class Genome:
         self.nodes[new_node_id] = NodeGene(new_node_id, NodeType.HIDDEN)
 
         innovation_1 = tracker.get_connection_innovation(
-            connection.in_node, new_node_id)
+            connection.in_node, new_node_id
+        )
         self.connections[innovation_1] = ConnectionGene(
             innovation=innovation_1,
             in_node=connection.in_node,
             out_node=new_node_id,
             weight=1.0,
-            enabled=True
+            enabled=True,
         )
 
         innovation_2 = tracker.get_connection_innovation(
-            new_node_id, connection.out_node)
+            new_node_id, connection.out_node
+        )
         self.connections[innovation_2] = ConnectionGene(
             innovation=innovation_2,
             in_node=new_node_id,
             out_node=connection.out_node,
             weight=connection.weight,
-            enabled=True
+            enabled=True,
         )
 
-    def mutate_toggle_connection(self, rng: np.random.Generator,):
+    def mutate_toggle_connection(
+        self,
+        rng: np.random.Generator,
+    ):
         if not self.connections:
             return
 
-        connection = self.connections[
-            int(rng.choice(list(self.connections.keys())))]
+        connection = self.connections[int(
+            rng.choice(list(self.connections.keys())))]
         connection.enabled = not connection.enabled
 
-    def mutate(self, tracker: InnovationTracker, rng: np.random.Generator, config: NEATConfig,):
+    def mutate(
+        self,
+        tracker: InnovationTracker,
+        rng: np.random.Generator,
+        config: NEATConfig,
+    ):
 
         self.mutate_weights(rng, config)
 
@@ -355,22 +386,14 @@ class Genome:
 
             if connection.in_node not in child.nodes:
                 child.nodes[connection.in_node] = copy.deepcopy(
-                    parent1.nodes.get(
-                        connection.in_node
-                    )
-                    or parent2.nodes[
-                        connection.in_node
-                    ]
+                    parent1.nodes.get(connection.in_node)
+                    or parent2.nodes[connection.in_node]
                 )
 
             if connection.out_node not in child.nodes:
                 child.nodes[connection.out_node] = copy.deepcopy(
-                    parent1.nodes.get(
-                        connection.out_node
-                    )
-                    or parent2.nodes[
-                        connection.out_node
-                    ]
+                    parent1.nodes.get(connection.out_node)
+                    or parent2.nodes[connection.out_node]
                 )
 
         return child
@@ -383,13 +406,16 @@ class NeatNetwork:
         self.genome = genome
 
         self.input_nodes = sorted(
-            node.id for node in genome.nodes.values()if node.type == NodeType.INPUT)
+            node.id for node in genome.nodes.values() if node.type == NodeType.INPUT
+        )
 
         self.bias_nodes = [
-            node.id for node in genome.nodes.values()if node.type == NodeType.BIAS]
+            node.id for node in genome.nodes.values() if node.type == NodeType.BIAS
+        ]
 
         self.output_nodes = sorted(
-            node.id for node in genome.nodes.values() if node.type == NodeType.OUTPUT)
+            node.id for node in genome.nodes.values() if node.type == NodeType.OUTPUT
+        )
 
         self.incoming = {}
 
@@ -415,8 +441,8 @@ class NeatNetwork:
                                  ).append(connection.out_node)
             indegree[connection.out_node] += 1
 
-        queue = deque(node_id for node_id, degree in indegree.items()
-                      if degree == 0)
+        queue = deque(node_id for node_id,
+                      degree in indegree.items() if degree == 0)
 
         order = []
         while queue:
@@ -454,8 +480,9 @@ class NeatNetwork:
 
             values[node_id] = np.tanh(total)
 
-        return np.array([values.get(node_id, 0) for node_id in self.output_nodes],
-                        dtype=np.float32)
+        return np.array(
+            [values.get(node_id, 0) for node_id in self.output_nodes], dtype=np.float32
+        )
 
 
 @dataclass
@@ -477,18 +504,16 @@ class NEATPopulation:
 
         self.config = config or NEATConfig()
         self.rng = np.random.default_rng(seed)
-        first_hidden_id = (input_count + 1 + output_count)
+        first_hidden_id = input_count + 1 + output_count
         self.input_count = input_count
         self.output_count = output_count
         self.tracker = InnovationTracker(first_dynamic_node_id=first_hidden_id)
 
         self.genomes = [
-            Genome.initial(
-                self.input_count,
-                self.output_count,
-                self.tracker,
-                self.rng)
-            for _ in range(self.config.population_size)]
+            Genome.initial(self.input_count, self.output_count,
+                           self.tracker, self.rng)
+            for _ in range(self.config.population_size)
+        ]
 
         self.species = []
         self.next_species_id = 0
@@ -502,7 +527,7 @@ class NEATPopulation:
             found_species = False
             for species in self.species:
                 distance = genome.distance(species.representative, self.config)
-                if (distance < self.config.compatibility_threshold):
+                if distance < self.config.compatibility_threshold:
                     species.members.append(genome)
                     found_species = True
                     break
@@ -511,7 +536,7 @@ class NEATPopulation:
                 species = Species(
                     id=self.next_species_id,
                     representative=genome.copy(),
-                    members=[genome]
+                    members=[genome],
                 )
                 self.next_species_id += 1
                 self.species.append(species)
@@ -522,7 +547,7 @@ class NEATPopulation:
         # Pick a new representative.
         for species in self.species:
             index = int(self.rng.integers(len(species.members)))
-            species.representative = (species.members[index].copy())
+            species.representative = species.members[index].copy()
 
     def assign_fitness(self, fitnesses):
         for genome, fitness in zip(self.genomes, fitnesses):
@@ -547,9 +572,9 @@ class NEATPopulation:
         if scores.sum() <= 0:
             scores[:] = 1.0
 
-        raw = (scores / scores.sum() * remaining)
+        raw = scores / scores.sum() * remaining
         allocation = np.floor(raw).astype(int)
-        leftover = (remaining - int(allocation.sum()))
+        leftover = remaining - int(allocation.sum())
 
         if leftover > 0:
             fractions = raw - allocation
@@ -564,14 +589,15 @@ class NEATPopulation:
         elites_per_species = []
 
         for species in self.species:
-            ranked = sorted(species.members,
-                            key=lambda genome: genome.fitness, reverse=True)
+            ranked = sorted(
+                species.members, key=lambda genome: genome.fitness, reverse=True
+            )
             elite_count = min(self.config.elitism_per_species, len(ranked))
             elites_per_species.append(ranked[:elite_count])
 
         total_elites = sum(len(elites) for elites in elites_per_species)
 
-        remaining = (self.config.population_size - total_elites)
+        remaining = self.config.population_size - total_elites
 
         allocation = self._allocate_offspring(remaining)
 
@@ -583,13 +609,12 @@ class NEATPopulation:
         # Children
         for species_index, species in enumerate(self.species):
             ranked = sorted(
-                species.members,
-                key=lambda genome: genome.fitness,
-                reverse=True
+                species.members, key=lambda genome: genome.fitness, reverse=True
             )
 
             parent_count = max(
-                1, int(np.ceil(len(ranked) * self.config.survival_threshold)))
+                1, int(np.ceil(len(ranked) * self.config.survival_threshold))
+            )
 
             parents = ranked[:parent_count]
             child_count = allocation[species_index]
@@ -604,13 +629,12 @@ class NEATPopulation:
         if len(new_genomes) < self.config.population_size:
             new_genomes = new_genomes + [
                 Genome.initial(
-                    self.input_count,
-                    self.output_count,
-                    self.tracker,
-                    self.rng
-                ) for _ in range(self.config.population_size - len(new_genomes))]
+                    self.input_count, self.output_count, self.tracker, self.rng
+                )
+                for _ in range(self.config.population_size - len(new_genomes))
+            ]
 
-        self.genomes = new_genomes[:self.config.population_size]
+        self.genomes = new_genomes[: self.config.population_size]
 
     def next_generation(self, fitnesses):
 

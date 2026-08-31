@@ -1,5 +1,5 @@
 import sys
-import constants
+
 import numpy as np
 import pygame
 import torch
@@ -17,7 +17,8 @@ def draw_scene(screen, font, pendulum, score, best_score, time_left, round_over)
     screen.fill(BG_COLOR)
 
     pygame.draw.line(
-        screen, TRACK_COLOR,
+        screen,
+        TRACK_COLOR,
         (SCREEN_W / 2 - TRACK_HALF_WIDTH, TRACK_Y),
         (SCREEN_W / 2 + TRACK_HALF_WIDTH, TRACK_Y),
         4,
@@ -39,15 +40,25 @@ def draw_scene(screen, font, pendulum, score, best_score, time_left, round_over)
     draw_text(screen, font, f"Score: {score:.1f}", (20, 50))
     draw_text(screen, font, f"Best: {best_score:.1f}", (20, 80))
     draw_text(screen, font, f"Time left: {time_left:.1f}s", (20, 110))
-    draw_text(screen, font, "Arrows: push cart   M: switch mode   R: reset",
-              (20, SCREEN_H - 40))
+    draw_text(
+        screen,
+        font,
+        "Arrows: push cart   M: switch mode   R: reset",
+        (20, SCREEN_H - 40),
+    )
 
     if round_over:
-        draw_text(screen, font, f"Time's up! Final score: {score:.1f}  (Press R to play again)",
-                  (SCREEN_W / 2 - 280, SCREEN_H / 2 - 120), HIGHLIGHT_COLOR)
+        draw_text(
+            screen,
+            font,
+            f"Time's up! Final score: {score:.1f}  (Press R to play again)",
+            (SCREEN_W / 2 - 280, SCREEN_H / 2 - 120),
+            HIGHLIGHT_COLOR,
+        )
 
 
-def play_game(render=True, agent=None, mode=0, start_angle=np.pi, start_angle2=np.pi):
+def play_game(render=True, agent=None, mode=0, start_upright=False, seed=None):
+    rng = np.random.default_rng(seed)
 
     if render:
         pygame.init()
@@ -64,11 +75,7 @@ def play_game(render=True, agent=None, mode=0, start_angle=np.pi, start_angle2=n
     best_scores = {name: 0.0 for name in modes}
 
     def start_new_round():
-        if mode == 1:
-            pendulum.reset(angle=start_angle, angle2=start_angle2)
-        else:
-            pendulum.reset(angle=start_angle)
-
+        pendulum.reset(upright=start_upright, rng=rng)
         return 0.0, 0.0, False  # elapsed, score, round_over
 
     elapsed, score, round_over = start_new_round()
@@ -80,7 +87,7 @@ def play_game(render=True, agent=None, mode=0, start_angle=np.pi, start_angle2=n
 
     while running:
         force = 0.0
-
+        keys = {pygame.K_LEFT: False, pygame.K_RIGHT: False}
         if render:
             clock.tick(FPS)
         if render:
@@ -100,16 +107,15 @@ def play_game(render=True, agent=None, mode=0, start_angle=np.pi, start_angle2=n
                         score_timer = 0.0
                     elif event.key == pygame.K_SPACE:
                         pendulum.nudge_tip(
-                            np.random.randn()*SPACE_NUDGE_IMPULSE)
+                            np.random.randn() * SPACE_NUDGE_IMPULSE)
 
             keys = pygame.key.get_pressed()
         if agent is not None:
-            if not render:
-                keys = {pygame.K_LEFT: False, pygame.K_RIGHT: False}
+            # keys = {pygame.K_LEFT: False, pygame.K_RIGHT: False}
             if agent is not None:
                 state = pendulum.get_state()
                 # keys = agent.get_action(state)
-                force = agent.get_action(state, use_force=True)*FORCE_MAG
+                force = agent.get_action(state, use_force=True) * FORCE_MAG
 
         if keys[pygame.K_LEFT]:
             force -= FORCE_MAG
@@ -128,9 +134,10 @@ def play_game(render=True, agent=None, mode=0, start_angle=np.pi, start_angle2=n
                 POINTS_PER_TICK)
             ticks, score_timer = divmod(score_timer, SCORE_TICK)
             score += ticks * current_score
-            fitness += current_fitness*dt
+            fitness += current_fitness * dt
 
-            if elapsed >= ROUND_DURATION:
+            fallen = start_upright and pendulum.has_fallen()
+            if elapsed >= ROUND_DURATION or fallen:
                 round_over = True
                 current_mode = mode_names[mode_index]
                 best_scores[current_mode] = max(
@@ -140,8 +147,15 @@ def play_game(render=True, agent=None, mode=0, start_angle=np.pi, start_angle2=n
         if not render and round_over:
             break
         if render:
-            draw_scene(screen, font, pendulum, score,
-                       best_scores[mode_names[mode_index]], time_left, round_over)
+            draw_scene(
+                screen,
+                font,
+                pendulum,
+                score,
+                best_scores[mode_names[mode_index]],
+                time_left,
+                round_over,
+            )
             pygame.display.flip()
 
     if render:
@@ -155,6 +169,5 @@ if __name__ == "__main__":
     # agent = Agent()
     # agent.load_state_dict(torch.load("agents/neuroevolution.pth"))
     agent = NeatAgent.load_from_file(
-        "agents/best_neat_genome_double_pendulum.pkl")
-    print(play_game(render=True, agent=agent, mode=1))
-    # ,start_angle=0.0+np.random.randn(), start_angle2=0.0+np.random.randn()))
+        "agents/double_pendulum.pkl")
+    print(play_game(render=True, agent=agent, start_upright=False, mode=1))
