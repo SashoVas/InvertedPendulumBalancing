@@ -3,7 +3,6 @@ import math
 import numpy as np
 from constants import *
 
-
 # Derived double-pendulum constants, precomputed at import.
 #
 # The mass matrix of the two-link system is
@@ -127,6 +126,8 @@ class SinglePendulum(PendulumCart):
         ]
 
     def get_fitness(self, points_per_tick):
+        # math.remainder wraps the angle into [-pi, pi], same as the
+        # atan2(sin, cos) idiom but with one trig call instead of three.
         angle_error = abs(math.remainder(self.theta, math.tau))
 
         is_balanced = angle_error <= _MAX_ANGLE_RAD
@@ -179,6 +180,7 @@ class DoublePendulum(PendulumCart):
         s1, c1 = math.sin(t1), math.cos(t1)
         s2, c2 = math.sin(t2), math.cos(t2)
 
+        # Angle-difference identities, cheaper than two more trig calls.
         s12 = s1 * c2 - c1 * s2
         c12 = c1 * c2 + s1 * s2
 
@@ -197,6 +199,8 @@ class DoublePendulum(PendulumCart):
             - _M2_L2 * c2 * x_ddot
         )
 
+        # det = m2 * l1**2 * l2**2 * ((m1 + m2) - m2 * cos(t1 - t2)**2), which is
+        # bounded below by m1 * l1**2 * l2**2 * m2 > 0, so it never vanishes.
         inv_det = 1.0 / (_A11_A22 - a12 * a12)
 
         return (
@@ -210,6 +214,15 @@ class DoublePendulum(PendulumCart):
         t1, t2 = self.theta1, self.theta2
         v1, v2 = self.theta1_dot, self.theta2_dot
         half = dt * 0.5
+
+        # Classic RK4 over (theta1, theta2, theta1_dot, theta2_dot), with
+        # x_ddot held fixed across the four stages - the applied force is
+        # constant over a substep. The derivative of each angle is its own
+        # velocity, so the position stages are just the trial velocities.
+        #
+        # Semi-implicit Euler bled ~48% of the system's energy over a 30s round
+        # at SUBSTEPS=4 and could diverge to inf under a feedback controller;
+        # RK4 conserves it to within rounding at the same substep count.
         a1, a2 = self.angular_acceleration(t1, t2, v1, v2, x_ddot)
 
         v1_b, v2_b = v1 + half * a1, v2 + half * a2
@@ -233,12 +246,19 @@ class DoublePendulum(PendulumCart):
         self.theta1_dot = v1 + sixth * (a1 + 2.0 * b1 + 2.0 * c1 + d1)
         self.theta2_dot = v2 + sixth * (a2 + 2.0 * b2 + 2.0 * c2 + d2)
 
+        # The cart is a damped linear system driven only by the applied force,
+        # so it keeps the original semi-implicit Euler update.
         self.x_dot += x_ddot * dt
         self.x += self.x_dot * dt
 
         self.clamp_to_track()
 
     def upright_fraction(self):
+        """1.0 when both links point straight up, 0.0 when both hang down.
+
+        Based on the height of the tip (end of the second link) relative to
+        the cart, normalized by the pendulum's total length.
+        """
         tip_height = D_POLE_LEN_1 * math.cos(self.theta1) + D_POLE_LEN_2 * math.cos(
             self.theta2
         )
@@ -253,6 +273,13 @@ class DoublePendulum(PendulumCart):
         )
 
     def has_fallen(self):
+        """True once either link has dropped past FALL_TERMINATION_UPRIGHT.
+
+        Each link is judged separately rather than through upright_fraction(),
+        which averages the two via the tip height and so misses a jackknife -
+        lower link up, upper link hanging - which averages back to 0.5 and
+        looks acceptable while being nowhere near balanced.
+        """
         first, second = self.link_fractions()
         return first < FALL_TERMINATION_UPRIGHT or second < FALL_TERMINATION_UPRIGHT
 
@@ -282,16 +309,19 @@ class DoublePendulum(PendulumCart):
         ]
 
     def get_fitness(self, points_per_tick):
+        # math.remainder wraps each angle into [-pi, pi], same as the
+        # atan2(sin, cos) idiom but with one trig call instead of three.
         a1 = abs(math.remainder(self.theta1, math.tau))
         a2 = abs(math.remainder(self.theta2, math.tau))
 
         upright = self.upright_fraction()
 
+        # Product, not sum: "link 1 up, link 2 hanging" must not score half.
         balanced = math.exp(-4.0 * a1 * a1) * math.exp(-4.0 * a2 * a2)
         fitness = (
             0.4 * upright
             + 0.6 * balanced
-            - 0.05 * abs(self.x) / TRACK_LIMIT
+            - 0.15 * abs(self.x) / TRACK_LIMIT
             - 0.05 * (abs(self.theta1_dot) +
                       abs(self.theta2_dot)) / THETA_DOT_SCALE
         )

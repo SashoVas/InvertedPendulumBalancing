@@ -58,6 +58,13 @@ def draw_scene(screen, font, pendulum, score, best_score, time_left, round_over)
 
 
 def play_game(render=True, agent=None, mode=0, start_upright=False, seed=None):
+    """Play or evaluate one round.
+
+    start_upright: begin near vertical (balance only) instead of hanging
+                   (the full swing-up task). Noise is UPRIGHT_START_NOISE.
+    seed:          seeds that start noise. Pass one when evaluating a
+                   population so every agent faces the same conditions.
+    """
     rng = np.random.default_rng(seed)
 
     if render:
@@ -169,5 +176,6 @@ if __name__ == "__main__":
     # agent = Agent()
     # agent.load_state_dict(torch.load("agents/neuroevolution.pth"))
     agent = NeatAgent.load_from_file(
-        "agents/double_pendulum.pkl")
+        "agents/best_neat_genome_double_pendulum_equal2.pkl"
+    )
     print(play_game(render=True, agent=agent, start_upright=False, mode=1))

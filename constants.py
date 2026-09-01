@@ -24,8 +24,8 @@ S_POLE_LEN = 1.6
 # Double pendulum parameters (two links, each with a point mass at its end)
 # D_POLE_MASS_1 = 0.6
 # D_POLE_MASS_2 = 0.6
-D_POLE_MASS_1 = 1.0  # 1.5  # was 0.6
-D_POLE_MASS_2 = 0.3  # 0.3  # was 0.6
+D_POLE_MASS_1 = 0.6  # 0.3  # 0.6  # 1.0  # 1.5  # was 0.6
+D_POLE_MASS_2 = 0.6  # 0.3  # 0.3  # 0.3  # 0.3  # was 0.6
 
 D_POLE_LEN_1 = 1.0
 D_POLE_LEN_2 = 1.0
@@ -45,7 +45,7 @@ THETA_DOT_SCALE = 20.0
 
 MAX_ANGLE_TO_AWARD_POINTS = 45
 
-SPACE_NUDGE_IMPULSE = 1.5
+SPACE_NUDGE_IMPULSE = 0.75
 
 # Standard deviation (radians) of the angle noise applied to each link when a
 # round starts upright instead of hanging. ~0.10 rad is about 6 degrees.

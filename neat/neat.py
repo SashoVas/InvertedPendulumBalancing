@@ -166,8 +166,7 @@ class Genome:
         if matching:
             weight_difference = np.mean(
                 [
-                    abs(self.connections[i].weight -
-                        other.connections[i].weight)
+                    abs(self.connections[i].weight - other.connections[i].weight)
                     for i in matching
                 ]
             )
@@ -188,8 +187,7 @@ class Genome:
             if not connection.enabled:
                 continue
 
-            adjacency.setdefault(connection.in_node, []
-                                 ).append(connection.out_node)
+            adjacency.setdefault(connection.in_node, []).append(connection.out_node)
 
         stack = [target]
         visited = set()
@@ -211,8 +209,7 @@ class Genome:
             if rng.random() > config.weight_mutation_rate:
                 continue
             if rng.random() < config.weight_perturb_rate:
-                connection.weight += rng.normal(0.0,
-                                                config.weight_perturb_scale)
+                connection.weight += rng.normal(0.0, config.weight_perturb_scale)
             else:
                 connection.weight = rng.normal(0.0, config.weight_reset_scale)
 
@@ -249,8 +246,7 @@ class Genome:
             if source == target:
                 continue
 
-            already_exists = tracker.get_connection_innovation_if_exists(
-                source, target)
+            already_exists = tracker.get_connection_innovation_if_exists(source, target)
             if already_exists is not None and already_exists in self.connections:
                 continue
 
@@ -316,8 +312,7 @@ class Genome:
         if not self.connections:
             return
 
-        connection = self.connections[int(
-            rng.choice(list(self.connections.keys())))]
+        connection = self.connections[int(rng.choice(list(self.connections.keys())))]
         connection.enabled = not connection.enabled
 
     def mutate(
@@ -353,8 +348,7 @@ class Genome:
         for node_id, node in parent1.nodes.items():
             child.nodes[node_id] = copy.deepcopy(node)
 
-        all_innovations = sorted(
-            set(parent1.connections) | set(parent2.connections))
+        all_innovations = sorted(set(parent1.connections) | set(parent2.connections))
 
         for innovation in all_innovations:
 
@@ -424,8 +418,7 @@ class NeatNetwork:
             if not connection.enabled:
                 continue
 
-            self.incoming.setdefault(
-                connection.out_node, []).append(connection)
+            self.incoming.setdefault(connection.out_node, []).append(connection)
 
         self.order = self._topological_sort()
 
@@ -437,12 +430,10 @@ class NeatNetwork:
         for connection in self.genome.connections.values():
             if not connection.enabled:
                 continue
-            adjacency.setdefault(connection.in_node, []
-                                 ).append(connection.out_node)
+            adjacency.setdefault(connection.in_node, []).append(connection.out_node)
             indegree[connection.out_node] += 1
 
-        queue = deque(node_id for node_id,
-                      degree in indegree.items() if degree == 0)
+        queue = deque(node_id for node_id, degree in indegree.items() if degree == 0)
 
         order = []
         while queue:
@@ -510,8 +501,7 @@ class NEATPopulation:
         self.tracker = InnovationTracker(first_dynamic_node_id=first_hidden_id)
 
         self.genomes = [
-            Genome.initial(self.input_count, self.output_count,
-                           self.tracker, self.rng)
+            Genome.initial(self.input_count, self.output_count, self.tracker, self.rng)
             for _ in range(self.config.population_size)
         ]
 
