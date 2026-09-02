@@ -4,6 +4,11 @@ An AI project that learns to balance an inverted pendulum using **neuroevolution
 
 ## Example
 
+## Double Pendulum
+![alt text](demo/demo2.gif)
+
+
+## Single Pendulum
 ![Demo](demo/demo.gif)
 
 ## 🚀 Overview
@@ -16,6 +21,19 @@ The goal is simple: **keep the inverted pendulum balanced for as long as possibl
 
 * **Simple Neuroevolution** — evolves neural network weights through selection, mutation, and reproduction.
 * **NEAT** — evolves both neural network weights and topology, allowing increasingly complex networks to emerge over generations.
+
+## Training Results
+
+### Double Pendulum Solution
+
+The best solution found for the double pendulum case is shown in the image below.
+![alt text](demo/Network.png)
+
+### Training Progress
+
+The training progress and fitness evolution over the generations are shown in the plot below.
+![alt text](demo/traning.png)
+
 
 ## 🎮 Environment
 

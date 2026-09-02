@@ -13,7 +13,7 @@ FORCE_MAG = 20.0  # push force applied by arrow keys
 DAMPING_CART = 0.5  # friction on the cart
 DAMPING_JOINT = 0.02  # friction at each pendulum joint
 
-ROUND_DURATION = 15.0  # length of a round, in seconds
+ROUND_DURATION = 60.0  # length of a round, in seconds
 SCORE_TICK = 0.1  # seconds between score updates
 POINTS_PER_TICK = 0.1  # points per tick when perfectly upright
 
